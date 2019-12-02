@@ -1,11 +1,10 @@
 import random
 import numpy as np
-import move_interface
-#from move_interface import MoveInterface.Direction as Dir
+from pynput import keyboard
 from time import sleep
 from graphics import *
 
-gameOn = True 
+dirnx=1; dirny=0; gameOn = True 
 
 ################################################# Functions  ################################################# 
 
@@ -42,20 +41,31 @@ def updateBoard(snake, dim):
     board[food[0],food[1]] = 3          #Food
     return board
 
-
-
-def updateSnake(snake, dim, direction):
-    global food
-    print(direction)
-    if direction == move_interface.Direction.NORTH:
-        dirnx = 0; dirny = 1
-    elif direction == Direction.SOUTH:
-        dirnx = 0; dirny = -1
-    elif direction == Direction.EAST:
-        dirnx = 1; dirny = 0
-    elif direction == Direction.WEST:
-        dirnx = -1; dirny = 0
+def on_press(key):
+    try:
+        pass #print('alphanum key {0} pressed'.format(key.char))
+    except AttributeError:
+        pass #print('special key {0} pressed'.format(key))
     
+def on_release(key):
+    global dirnx, dirny, gameOn
+    if key == keyboard.Key.left and dirny != 1:
+        dirnx = 0
+        dirny = -1
+    elif key == keyboard.Key.right and dirny != -1:
+        dirnx = 0
+        dirny = 1
+    elif key == keyboard.Key.up and dirnx != 1:
+        dirnx = -1
+        dirny = 0
+    elif key == keyboard.Key.down and dirnx != -1:
+        dirnx = 1
+        dirny = 0
+    elif key == keyboard.Key.esc:
+        gameOn = False
+
+def updateSnake(snake, dim):
+    global food
     snake.insert(0, [snake[0][0]+dirnx, snake[0][1]+dirny])
     if food == snake[0]:
         newFood(dim, snake)
@@ -77,14 +87,16 @@ def go(board):
 def initWindow(dim, boxDim):
     winDim = dim*boxDim
     win = GraphWin('Snake2', winDim, winDim)
-    for i in range(dim):
-        Line(Point(i*boxDim,0), Point(i*boxDim, winDim)).draw(win) # vertical lines
-        Line(Point(0, i*boxDim), Point(winDim, i*boxDim)).draw(win) # horizontal lines
     return win
 
 def drawBoard(board, boxDim, win):
     dim = len(board)
-    winDim = dim*boxDim 
+    winDim = dim*boxDim
+    
+    for i in range(dim):
+        Line(Point(i*boxDim,0), Point(i*boxDim, winDim)).draw(win) # vertical lines
+        Line(Point(0, i*boxDim), Point(winDim, i*boxDim)).draw(win) # horizontal lines
+    
     for row in range(dim):
         for col in range(dim):
             tile = board[row][col]
@@ -111,9 +123,6 @@ def main():
     board = np.zeros((dim,dim))
     snake= []
 
-    # Init Move Interface
-    moveInterface = move_interface.KeyboardInterface() # Keyboard input
-
     # Init display window
     boxDim = 25
     win = initWindow(dim, boxDim)
@@ -122,12 +131,15 @@ def main():
     snake = initSnake(dim)
     newFood(dim, snake)
     updateBoard(snake, dim)
-#    go(board)
-
+    go(board)
+    
+    # Keyboard listener 
+    listener = keyboard.Listener(on_press=on_press, on_release=on_release)
+    listener.start()
     
     # Main loop
     while(gameOn):
-        snake = updateSnake(snake, dim, moveInterface.nextDirection())
+        snake = updateSnake(snake, dim)
         if loseCondition(snake, dim):
             score = len(snake)-1
             print('Game Over! \nYour score: {0}'.format(score))   
